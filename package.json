@@ -1,0 +1,20 @@
+{
+  "name": "npme-migration",
+  "version": "1.0.0",
+  "description": "Migration script to migration @zillow scoped packages from ZNPM to NPME",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.zgtools.net/zillow/fit/npm-migration"
+  },
+  "keywords": [
+    "npm",
+    "migration",
+    "script"
+  ],
+  "author": "Joe Bakke <joeba@zillowgroup.com>",
+  "license": "MIT"
+}
