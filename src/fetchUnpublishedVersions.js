@@ -12,17 +12,16 @@ const getPackageVersionInfo = (packageName, { 'dist-tags': distTags, versions })
         const currentVersionInfo = {
             packageName,
             version,
+            distTags: [],
             tarballUrl: `${dist.tarball}`,
             tarballPath: path.resolve(PACKAGES_DIR, packageName, '_attachments', tarballName)
         };
-
-        console.log(packageName, version, _npmUser);
 
         Object.keys(distTags).forEach(distTag => {
             const distTagVersion = distTags[distTag];
 
             if (version === distTagVersion) {
-                currentVersionInfo.distTag = distTag;
+                currentVersionInfo.distTags = [...currentVersionInfo.distTags, distTag];
             }
         })
 

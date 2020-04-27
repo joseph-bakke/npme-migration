@@ -3,11 +3,13 @@ const { v4: uuid }  = require('uuid');
 const { ReadableStreamBuffer, WritableStreamBuffer } = require('stream-buffers')
 const zlib = require('zlib');
 const gunzip = require('gunzip-maybe');
+const path = require('path');
+const fs = require('fs-extra');
 
 const { NPME_URL } = require('./constants');
 
 // largely copied from https://github.com/npm/pneumatic-tubes/blob/master/lib/transform-tarball.js
-async function transformTarball(tempFolder, tarballPath ) {
+async function transformTarball(tempFolder, {tarballPath}) {
     const newTarball = path.resolve(tempFolder, `${uuid()}.tgz`)
     const srcStream = fs.createReadStream(tarballPath)
     const dstStream = fs.createWriteStream(newTarball)
@@ -37,7 +39,7 @@ async function transformTarball(tempFolder, tarballPath ) {
                 stream.on('end', () => pack.entry(header, callback).end())
                 stream.resume()
             } else if (header.name === 'package/package.json') {
-                console.info(`Inspecting ${header.name}`)
+                // console.info(`Inspecting ${header.name}`)
                 const inBuffer = new WritableStreamBuffer()
                 const outBuffer = new ReadableStreamBuffer()
 
@@ -51,8 +53,13 @@ async function transformTarball(tempFolder, tarballPath ) {
                             outBuffer.put(pkgString)
                         } else {
                             correctedPublishRegistry = true
-                            console.info(`rewriting custom registry: ${pkg.publishConfig.registry} -> ${NPME_URL}`)
+                            // console.info(`rewriting custom registry: ${pkg.publishConfig.registry} -> ${NPME_URL}`)
                             pkg.publishConfig.registry = NPME_URL;
+
+                            // tags are saved from ZNPM and will be assigned after publish
+                            if (pkg.publishConfig.tag) {
+                                delete pkg.publishConfig['tag'];
+                            }
                             outBuffer.put(JSON.stringify(pkg, null, 2) + '\n', 'utf8')
                         }
                         outBuffer.stop()
@@ -61,7 +68,7 @@ async function transformTarball(tempFolder, tarballPath ) {
                     })
             } else {
                 // Forward the entry into the new tarball unmodified.
-                console.info(`Forwarding ${header.name}`);
+                // console.info(`Forwarding ${header.name}`);
                 stream.pipe(pack.entry(header, callback));
             }
         });
