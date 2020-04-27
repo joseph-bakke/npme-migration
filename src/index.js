@@ -32,7 +32,7 @@ async function ensureTarballOnDisk({tarballPath, tarballUrl}) {
 }
 
 async function publishToNpm({ tarballPath }) {
-    let command = ['publish', tarballPath, '--dry-run'];
+    let command = ['publish', tarballPath];
     console.log(`publishing: npm ${command.join(' ')}`);
     await execa('npm', command, { stdio: 'inherit' });
 }
