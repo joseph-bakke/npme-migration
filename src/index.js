@@ -4,7 +4,7 @@ const fs = require('fs-extra');
 const axios = require('axios');
 const Promise = require('bluebird');
 const tempy = require('tempy');
-const execa = require('execa');
+const npm = require('npm');
 
 const transformTarball = require('./transformTarball');
 const fetchUnpublishedVersions = require('./fetchUnpublishedVersions');
@@ -34,37 +34,57 @@ async function ensureTarballOnDisk({tarballPath, tarballUrl}) {
 }
 
 async function publishToNpm({ tarballPath }) {
-    let command = ['publish', tarballPath];
-    console.log(`publishing: npm ${command.join(' ')}`);
-    await execa('npm', command, { stdio: 'inherit' });
+    try {
+        return new Promise((resolve) => {
+            npm.commands.publish([tarballPath], (err) => {
+                if (err) {
+                    console.log(err);
+                }
+                resolve();
+            });
+        });
+    } catch (e) {
+        console.log(e);
+    }
 }
 
 async function assignDistTags({ packageName, version, distTags }) {
-    Promise.each(distTags, async (distTag) => {
-        await execa('npm', 'dist-tag', 'add', `${packageName}@${version}`, distTag);
+    await Promise.each(distTags, async (distTag) => {
+        console.log('npm', ['dist-tag', 'add', `@zillow/${packageName}@${version}`, distTag].join(' '));
+        return new Promise((resolve) => {
+            npm.commands.run(['dist-tag', 'add', `@zillow/${packageName}@${version}`, distTag], resolve);   
+        })
     });
 }
 
 async function migratePackages() {
+    const start = Date.now();
     await fs.ensureDir(TEMP_FOLDER);
     const packages = await fs.readdir(PACKAGES_DIR);
     const { doc_count: initialNpmeDocCount } = await getRegistryMetaInfo(NPME_URL);
 
-    const unpublishedVersions = await fetchUnpublishedVersions(packages);
+    const [ , specificPackage ] = process.argv.slice(2);
+    const packagesToFetch = specificPackage ? [specificPackage] : packages;
 
-    await Promise.each(unpublishedVersions, ensureTarballOnDisk);
-    await Promise.each(unpublishedVersions, async (unpublishedVersion, index, length) => {
+    const unpublishedVersions = (await fetchUnpublishedVersions(packagesToFetch));
+
+    console.log(unpublishedVersions);
+    
+    await Promise.map(unpublishedVersions, ensureTarballOnDisk);
+    await Promise.map(unpublishedVersions, async (unpublishedVersion, index, length) => {
         console.log(`Transforming tarball: ${index} / ${length}`);
         await transformTarball(TEMP_FOLDER, unpublishedVersion);
     });
+
     await Promise.each(unpublishedVersions, publishToNpm);
     await Promise.each(unpublishedVersions, assignDistTags);
 
     const { doc_count: finalNpmeDocCount } = await getRegistryMetaInfo(NPME_URL);
     const publishedVersions = unpublishedVersions.length;
     
+    console.log(`Finished in ${Date.now() - start}ms`);
     console.log(`published versions: ${publishedVersions}`);
     console.log(`npme doc count diff: ${finalNpmeDocCount - initialNpmeDocCount}`);
 }
 
-migratePackages();
+npm.load({}, migratePackages);

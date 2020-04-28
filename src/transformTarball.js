@@ -39,7 +39,6 @@ async function transformTarball(tempFolder, {tarballPath}) {
                 stream.on('end', () => pack.entry(header, callback).end())
                 stream.resume()
             } else if (header.name === 'package/package.json') {
-                // console.info(`Inspecting ${header.name}`)
                 const inBuffer = new WritableStreamBuffer()
                 const outBuffer = new ReadableStreamBuffer()
 
@@ -53,7 +52,6 @@ async function transformTarball(tempFolder, {tarballPath}) {
                             outBuffer.put(pkgString)
                         } else {
                             correctedPublishRegistry = true
-                            // console.info(`rewriting custom registry: ${pkg.publishConfig.registry} -> ${NPME_URL}`)
                             pkg.publishConfig.registry = NPME_URL;
 
                             // tags are saved from ZNPM and will be assigned after publish
@@ -68,7 +66,6 @@ async function transformTarball(tempFolder, {tarballPath}) {
                     })
             } else {
                 // Forward the entry into the new tarball unmodified.
-                // console.info(`Forwarding ${header.name}`);
                 stream.pipe(pack.entry(header, callback));
             }
         });

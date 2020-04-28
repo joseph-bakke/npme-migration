@@ -1,6 +1,6 @@
 {
   "name": "@zillow/npme-migration",
-  "version": "0.0.0-asphalt-publish",
+  "version": "0.0.1-0.abc123",
   "description": "Migration script to migration @zillow scoped packages from ZNPM to NPME",
   "main": "index.js",
   "scripts": {
@@ -11,7 +11,9 @@
   "files": [
     "src"
   ],
-  "bin": { "npm-migration": "src/index.js" },
+  "bin": {
+    "npm-migration": "src/index.js"
+  },
   "repository": {
     "type": "git",
     "url": "https://gitlab.zgtools.net/zillow/fit/npm-migration"
@@ -21,15 +23,18 @@
     "migration",
     "script"
   ],
+  "publishConfig": {
+    "registry": "https://registry.zillow.npme.io/"
+  },
   "author": "Joe Bakke <joeba@zillowgroup.com>",
   "license": "MIT",
   "dependencies": {
     "axios": "^0.19.2",
     "bluebird": "^3.7.2",
-    "execa": "^4.0.0",
     "fs-extra": "^9.0.0",
     "gunzip-maybe": "^1.4.2",
-    "lodash": "^4.17.15",
+    "npm": "^6.14.4",
+    "semver": "^7.3.2",
     "stream-buffers": "^3.0.2",
     "tar-stream": "^2.1.2",
     "tempy": "^0.5.0",

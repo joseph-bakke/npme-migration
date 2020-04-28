@@ -1,17 +1,20 @@
 const axios = require('axios');
 const Promise = require('bluebird');
 const path = require('path');
+const semver = require('semver');
 
 const { NPME_URL, ZNPM_URL, PACKAGES_DIR } = require('./constants');
 
+const isPreRelease = (version) => version.match(/(\d+\.\d+\.\d+-.*)/g) !== null;
+
 const getPackageVersionInfo = (packageName, { 'dist-tags': distTags, versions }) => {
     const versionInfo = Object.keys(versions).reduce((acc, version) => {
-        const { dist } = versions[version];
+        const { dist, description } = versions[version];
         const tarballName = `${packageName}-${version}.tgz`;
-
         const currentVersionInfo = {
             packageName,
             version,
+            description,
             distTags: [],
             tarballUrl: `${dist.tarball}`,
             tarballPath: path.resolve(PACKAGES_DIR, packageName, '_attachments', tarballName)
@@ -25,8 +28,14 @@ const getPackageVersionInfo = (packageName, { 'dist-tags': distTags, versions })
             }
         })
 
+        if (isPreRelease(version) && currentVersionInfo.distTags.length === 0) {
+            return acc;
+        }
+
         return [...acc, currentVersionInfo];
     }, []);
+
+    versionInfo.sort((a, b) => semver.compare(a.version, b.version));
 
     return versionInfo;
 }
@@ -57,9 +66,9 @@ async function fetchNpmePublishedVersions(packageName) {
 }
 
 async function fetchUnpublishedVersions(packages) {
-    return Promise.reduce(packages, async (acc, package) => {
-        const znpmPackageInfo = await fetchZnpmPackageInfo(package);
-        const npmePublishedVersions = await fetchNpmePublishedVersions(package);
+    return Promise.reduce(packages, async (acc, packageName) => {
+        const znpmPackageInfo = await fetchZnpmPackageInfo(packageName);
+        const npmePublishedVersions = await fetchNpmePublishedVersions(packageName);
 
         return [
             ...acc,
