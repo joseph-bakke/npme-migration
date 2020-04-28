@@ -63,7 +63,7 @@ async function migratePackages() {
     const packages = await fs.readdir(PACKAGES_DIR);
     const { doc_count: initialNpmeDocCount } = await getRegistryMetaInfo(NPME_URL);
 
-    const [ , specificPackage ] = process.argv.slice(2);
+    const [ specificPackage ] = process.argv.slice(2);
     const packagesToFetch = specificPackage ? [specificPackage] : packages;
 
     const unpublishedVersions = (await fetchUnpublishedVersions(packagesToFetch));
