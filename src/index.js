@@ -5,6 +5,7 @@ const axios = require('axios');
 const Promise = require('bluebird');
 const tempy = require('tempy');
 const npm = require('npm');
+const path = require('path');
 
 const transformTarball = require('./transformTarball');
 const fetchUnpublishedVersions = require('./fetchUnpublishedVersions');
@@ -69,7 +70,7 @@ async function migratePackages() {
     const [ packagesDir, specificPackage ] = process.argv.slice(2);
 
     if (!packagesDir) {
-        console.log('Cannot migrated without packages dir');
+        console.log('Cannot migrate without packages dir');
         process.exit(1);
     }
 
