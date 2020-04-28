@@ -28,6 +28,7 @@ const getPackageVersionInfo = (packageName, { 'dist-tags': distTags, versions })
             }
         })
 
+        // dont publish pre releases without a dist tag
         if (isPreRelease(version) && currentVersionInfo.distTags.length === 0) {
             return acc;
         }
