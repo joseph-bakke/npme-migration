@@ -1,5 +1,5 @@
 {
-  "name": "npme-migration",
+  "name": "@zillow/npme-migration",
   "version": "0.0.0-asphalt-publish",
   "description": "Migration script to migration @zillow scoped packages from ZNPM to NPME",
   "main": "index.js",
