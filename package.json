@@ -1,11 +1,17 @@
 {
-  "name": "npme-migration",
-  "version": "1.0.0",
+  "name": "@zillow/npme-migration",
+  "version": "0.0.0-asphalt-publish",
   "description": "Migration script to migration @zillow scoped packages from ZNPM to NPME",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Who needs tests, we'll do it live!\" && exit 0",
+    "prepublishOnly": "echo \"npm publish invoked, be cautious if it is on your local machine\" && echo \"npm publish invoked, be cautious if it is on your local machine\"",
+    "asphalt-publish": "asphalt publish"
   },
+  "files": [
+    "src"
+  ],
+  "bin": { "npm-migration": "src/index.js" },
   "repository": {
     "type": "git",
     "url": "https://gitlab.zgtools.net/zillow/fit/npm-migration"
@@ -16,5 +22,21 @@
     "script"
   ],
   "author": "Joe Bakke <joeba@zillowgroup.com>",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.19.2",
+    "bluebird": "^3.7.2",
+    "execa": "^4.0.0",
+    "fs-extra": "^9.0.0",
+    "gunzip-maybe": "^1.4.2",
+    "lodash": "^4.17.15",
+    "stream-buffers": "^3.0.2",
+    "tar-stream": "^2.1.2",
+    "tempy": "^0.5.0",
+    "uuid": "^7.0.3",
+    "zlib": "^1.0.5"
+  },
+  "asphalt": {
+    "type": "library"
+  }
 }

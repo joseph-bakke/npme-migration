@@ -1,0 +1,4 @@
+include:
+  - project: 'zillow/fit/frontend-cicd-pipeline'
+    file: 'npm-package.yml'
+    ref: 'next'
