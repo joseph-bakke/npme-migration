@@ -44,9 +44,17 @@ const getPackageVersionInfo = (packageName, { 'dist-tags': distTags, versions })
 
 async function fetchZnpmPackageInfo(packageName) {
     const packageUrl = `${ZNPM_URL}/@zillow%2f${packageName}`;
-    const { data } = await axios.get(packageUrl);
 
-    return getPackageVersionInfo(packageName, data);
+    try {
+        const { data } = await axios.get(packageUrl);
+        return getPackageVersionInfo(packageName, data);
+    } catch (e) {
+        if (e.response.status === 404) {
+            console.log(`package ${packageName} doesnt exist in ZNPM. Skipping it.`);
+        }
+    }
+
+    return [];
 }
 
 async function fetchNpmePublishedVersions(packageName) {
