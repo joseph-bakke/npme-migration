@@ -11,6 +11,7 @@
   "files": [
     "src"
   ],
+  "bin": { "npm-migration": "src/index.js" },
   "repository": {
     "type": "git",
     "url": "https://gitlab.zgtools.net/zillow/fit/npm-migration"

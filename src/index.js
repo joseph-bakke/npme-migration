@@ -6,7 +6,7 @@ const execa = require('execa');
 
 const transformTarball = require('./transformTarball');
 const fetchUnpublishedVersions = require('./fetchUnpublishedVersions');
-const { NPME_URL, ZNPM_URL, PACKAGES_DIR } = require('./constants');
+const { NPME_URL, PACKAGES_DIR } = require('./constants');
 
 const TEMP_FOLDER = tempy.directory();
 
