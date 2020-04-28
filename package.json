@@ -37,8 +37,5 @@
   },
   "asphalt": {
     "type": "library"
-  },
-  "devDependencies": {
-    "@zillow/asphalt-cli": "^1.7.0"
   }
 }
