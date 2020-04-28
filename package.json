@@ -1,10 +1,12 @@
 {
   "name": "npme-migration",
-  "version": "1.0.0",
+  "version": "0.0.0-asphalt-publish",
   "description": "Migration script to migration @zillow scoped packages from ZNPM to NPME",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Who needs tests, we'll do it live!\" && exit 0"
+    "test": "echo \"Who needs tests, we'll do it live!\" && exit 0",
+    "prepublishOnly": "echo \"npm publish invoked, be cautious if it is on your local machine\" && echo \"npm publish invoked, be cautious if it is on your local machine\"",
+    "asphalt-publish": "asphalt publish"
   },
   "files": [
     "src"
@@ -32,5 +34,11 @@
     "tempy": "^0.5.0",
     "uuid": "^7.0.3",
     "zlib": "^1.0.5"
+  },
+  "asphalt": {
+    "type": "library"
+  },
+  "devDependencies": {
+    "@zillow/asphalt-cli": "^1.7.0"
   }
 }
