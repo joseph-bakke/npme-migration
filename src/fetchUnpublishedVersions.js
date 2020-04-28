@@ -3,11 +3,12 @@ const Promise = require('bluebird');
 const path = require('path');
 const semver = require('semver');
 
-const { NPME_URL, ZNPM_URL, PACKAGES_DIR } = require('./constants');
+const { NPME_URL, ZNPM_URL } = require('./constants');
 
 const isPreRelease = (version) => version.match(/(\d+\.\d+\.\d+-.*)/g) !== null;
 
 const getPackageVersionInfo = (packageName, { 'dist-tags': distTags, versions }) => {
+    const [ packagesDir ] = process.argv.slice(2);
     const versionInfo = Object.keys(versions).reduce((acc, version) => {
         const { dist, description } = versions[version];
         const tarballName = `${packageName}-${version}.tgz`;
@@ -17,7 +18,7 @@ const getPackageVersionInfo = (packageName, { 'dist-tags': distTags, versions })
             description,
             distTags: [],
             tarballUrl: `${dist.tarball}`,
-            tarballPath: path.resolve(PACKAGES_DIR, packageName, '_attachments', tarballName)
+            tarballPath: path.resolve(packagesDir, packageName, '_attachments', tarballName)
         };
 
         Object.keys(distTags).forEach(distTag => {

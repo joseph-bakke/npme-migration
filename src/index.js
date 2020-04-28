@@ -8,13 +8,18 @@ const npm = require('npm');
 
 const transformTarball = require('./transformTarball');
 const fetchUnpublishedVersions = require('./fetchUnpublishedVersions');
-const { NPME_URL, PACKAGES_DIR } = require('./constants');
+const { NPME_URL } = require('./constants');
 
 const TEMP_FOLDER = tempy.directory();
 
 async function getRegistryMetaInfo(registryUrl) {
-    const { data } = await axios.get(registryUrl);
-    return data;
+    try {
+        const { data } = await axios.get(registryUrl);
+        return data;
+    } catch (e) {
+        console.log(e);
+    }
+    return {};
 }
 
 async function ensureTarballOnDisk({tarballPath, tarballUrl}) {
@@ -33,12 +38,15 @@ async function ensureTarballOnDisk({tarballPath, tarballUrl}) {
     });
 }
 
-async function publishToNpm({ tarballPath }) {
+async function publishToNpm({ tarballPath }, index, length) {
     try {
         return new Promise((resolve) => {
+            console.log(`publishing ${tarballPath}`)
             npm.commands.publish([tarballPath], (err) => {
                 if (err) {
                     console.log(err);
+                } else {
+                    console.log(`published ${index} / ${length} package`);
                 }
                 resolve();
             });
@@ -58,12 +66,18 @@ async function assignDistTags({ packageName, version, distTags }) {
 }
 
 async function migratePackages() {
+    const [ packagesDir, specificPackage ] = process.argv.slice(2);
+
+    if (!packagesDir) {
+        console.log('Cannot migrated without packages dir');
+        process.exit(1);
+    }
+
     const start = Date.now();
     await fs.ensureDir(TEMP_FOLDER);
-    const packages = await fs.readdir(PACKAGES_DIR);
+    const packages = await fs.readdir(path.resolve(packagesDir));
     const { doc_count: initialNpmeDocCount } = await getRegistryMetaInfo(NPME_URL);
 
-    const [ specificPackage ] = process.argv.slice(2);
     const packagesToFetch = specificPackage ? [specificPackage] : packages;
 
     const unpublishedVersions = (await fetchUnpublishedVersions(packagesToFetch));
