@@ -7,10 +7,10 @@ const tempy = require('tempy');
 const npm = require('npm');
 const path = require('path');
 const npmDistTag = require('@lerna/npm-dist-tag');
-const npmFetch = require('npm-registry-fetch');
 
 const transformTarball = require('./transformTarball');
 const fetchUnpublishedVersions = require('./fetchUnpublishedVersions');
+const npmPublish = require('./npmPublish');
 const { NPME_URL } = require('./constants');
 
 const TEMP_FOLDER = tempy.directory();
@@ -41,17 +41,9 @@ async function ensureTarballOnDisk({tarballPath, tarballUrl}) {
     });
 }
 
-async function publishToNpm({ packageName, tarballPath }, index, length) {
-    try {
-        console.log(`publishing ${packageName} from ${tarballPath} to ${NPME_URL}`);
-    } catch (e) {
-        console.log(e);
-    }
-}
-
-async function assignDistTags({ packageName, version, distTags }) {
+async function assignDistTags({ name, version, distTags }) {
     await Promise.each(distTags, (distTag) => {
-        console.log(`Adding dist tag ${distTag} to @zillow/${packageName}@${version}`);
+        console.log(`Adding dist tag ${distTag} to @zillow/${name}@${version}`);
         // npmDistTag.add(`@zillow/${packageName}@${version}`, distTag, {})
     });
 }
@@ -72,17 +64,18 @@ async function migratePackages() {
     const packagesToFetch = specificPackage ? [specificPackage] : packages;
     let publishedVersions = 0;
 
-    await Promise.each(packagesToFetch, async (packageName) => {
-        const unpublishedVersions = await fetchUnpublishedVersions(packageName);
+    await Promise.each(packagesToFetch, async (packageName, index, length) => {
+        console.log(`Processing package ${index + 1} / ${length}: ${packageName}`);
+        const unpublishedVersions = (await fetchUnpublishedVersions(packageName)).slice(0, 1);
+        console.log(`Got ${unpublishedVersions.length} unpublished versions to migrate`);
         
-        console.log(unpublishedVersions);
         await Promise.map(unpublishedVersions, ensureTarballOnDisk);
         await Promise.map(unpublishedVersions, async (unpublishedVersion, index, length) => {
-            console.log(`Transforming tarball: ${index} / ${length}`);
+            console.log(`Transforming tarball: ${index + 1} / ${length}`);
             await transformTarball(TEMP_FOLDER, unpublishedVersion);
         });
     
-        await Promise.each(unpublishedVersions, publishToNpm);
+        await Promise.each(unpublishedVersions, npmPublish);
         await Promise.each(unpublishedVersions, assignDistTags);
 
         publishedVersions += unpublishedVersions.length;

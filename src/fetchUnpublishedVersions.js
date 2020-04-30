@@ -8,12 +8,13 @@ const { NPME_URL, ZNPM_URL } = require('./constants');
 const getPackageVersionInfo = (packageName, { 'dist-tags': distTags, versions }) => {
     const [ packagesDir ] = process.argv.slice(2);
     const versionInfo = Object.keys(versions).reduce((acc, version) => {
-        const { dist, description } = versions[version];
+        const { dist, description, readme } = versions[version];
         const tarballName = `${packageName}-${version}.tgz`;
         const currentVersionInfo = {
-            packageName,
+            name: packageName,
             version,
             description,
+            readme,
             distTags: [],
             tarballUrl: `${dist.tarball}`,
             tarballPath: path.resolve(packagesDir, packageName, '_attachments', tarballName)

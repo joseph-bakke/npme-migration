@@ -26,7 +26,6 @@ async function transformTarball(tempFolder, {tarballPath}) {
                 pack.finalize();
                 await fs.remove(tarballPath); // remove untransformed tarball
                 await fs.move(newTarball, tarballPath); // move transformed tarball to original location
-                console.info(`transformed ${tarballPath}`)
                 resolve(newTarball);
             }
         }
