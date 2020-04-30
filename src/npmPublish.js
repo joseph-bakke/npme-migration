@@ -27,26 +27,26 @@ async function npmPublish(manifest, index, length) {
     const tarballData = await getTarballData({tarballPath, spec, manifest});
     const metadata = buildMetadata(registry, manifest, tarballData, opts);
 
-    try {
-        await npmFetch(spec.escapedName, {
-          ...opts,
-          method: 'PUT',
-          body: metadata,
-          ignoreBody: true
-        });
-
-        console.log(`Published ${index + 1} / ${length}: ${manifest.name}@${manifest.version}`);
-    } catch (e) {
-        console.log(e.message);
-    }
+    await npmFetch(spec.escapedName, {
+      ...opts,
+      method: 'PUT',
+      body: metadata,
+      ignoreBody: true
+    });
 }
 
 async function getTarballData({tarballPath, spec, manifest}) {
   const { dist: { integrity } } = manifest;
   const resolved = null;
   const from = `${spec.name}@${spec.rawSpec}`;
-  const tarballData = await fs.readFile(tarballPath);
-  
+  const { size } = await fs.stat(tarballPath);
+  let tarballData = await fs.readFile(tarballPath);
+
+  if (size !== tarballData.length) {
+    console.log(`size ${size} does not match length ${tarballData.length} retrying read`);
+    tarballData = await fs.readFile(tarballPath);
+  }
+
   tarballData.integrity = integrity;
   tarballData.resolved = resolved;
   tarballData.from = from;
