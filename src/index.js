@@ -44,7 +44,7 @@ async function ensureTarballOnDisk({tarballPath, tarballUrl}) {
 async function assignDistTags({ name, version, distTags }) {
     await Promise.each(distTags, (distTag) => {
         console.log(`Adding dist tag ${distTag} to ${name}@${version}`);
-        // npmDistTag.add(`@zillow/${packageName}@${version}`, distTag, {})
+        npmDistTag.add(`${name}@${version}`, distTag, { registry: NPME_URL, token: process.env.NPME_TOKEN })
     });
 }
 
@@ -66,7 +66,7 @@ async function migratePackages() {
 
     await Promise.each(packagesToFetch, async (packageName, index, length) => {
         console.log(`Processing package ${index + 1} / ${length}: ${packageName}`);
-        const unpublishedVersions = (await fetchUnpublishedVersions(packageName)).slice(0, 1);
+        const unpublishedVersions = await fetchUnpublishedVersions(packageName);
         console.log(`Got ${unpublishedVersions.length} unpublished versions to migrate`);
         
         await Promise.map(unpublishedVersions, ensureTarballOnDisk);
@@ -76,7 +76,7 @@ async function migratePackages() {
         });
     
         await Promise.each(unpublishedVersions, npmPublish);
-        await Promise.each(unpublishedVersions, assignDistTags);
+        await Promise.map(unpublishedVersions, assignDistTags);
 
         publishedVersions += unpublishedVersions.length;
     });    
