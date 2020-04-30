@@ -52,7 +52,7 @@ async function publishToNpm({ packageName, tarballPath }, index, length) {
 async function assignDistTags({ packageName, version, distTags }) {
     await Promise.each(distTags, (distTag) => {
         console.log(`Adding dist tag ${distTag} to @zillow/${packageName}@${version}`);
-        npmDistTag.add(`@zillow/${packageName}@${version}`, distTag, {})
+        // npmDistTag.add(`@zillow/${packageName}@${version}`, distTag, {})
     });
 }
 
