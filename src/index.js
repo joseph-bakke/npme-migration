@@ -73,7 +73,7 @@ async function migratePackages() {
     let publishedVersions = 0;
 
     await Promise.each(packagesToFetch, async (packageName) => {
-        const unpublishedVersions = (await fetchUnpublishedVersions(packageName)).slice(0, 1);
+        const unpublishedVersions = await fetchUnpublishedVersions(packageName);
         
         console.log(unpublishedVersions);
         await Promise.map(unpublishedVersions, ensureTarballOnDisk);
