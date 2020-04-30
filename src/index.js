@@ -25,14 +25,14 @@ async function getRegistryMetaInfo(registryUrl) {
     return {};
 }
 
-async function ensureTarballOnDisk({tarballPath, tarballUrl}) {
+async function ensureTarballOnDisk({tarballPath, dist: { tarball }}) {
     if (await fs.exists(tarballPath)) {
         return;
     }
 
-    console.log(`Cannot find ${tarballPath} on disk. Downloading ${tarballUrl}`);
+    console.log(`Cannot find ${tarballPath} on disk. Downloading ${tarball}`);
     const writeStream = fs.createWriteStream(tarballPath);
-    const { data } = await axios.get(tarballUrl, { responseType: 'stream' });
+    const { data } = await axios.get(tarball, { responseType: 'stream' });
 
     data.pipe(writeStream);
 
