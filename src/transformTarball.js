@@ -10,23 +10,23 @@ const { NPME_URL } = require('./constants');
 
 // largely copied from https://github.com/npm/pneumatic-tubes/blob/master/lib/transform-tarball.js
 async function transformTarball(tempFolder, {tarballPath}) {
-    const newTarball = path.resolve(tempFolder, `${uuid()}.tgz`)
-    const srcStream = fs.createReadStream(tarballPath)
-    const dstStream = fs.createWriteStream(newTarball)
-    const gunzipStream = gunzip()
-    const gzipStream = zlib.createGzip();
-
     return new Promise((resolve, reject) => {
+        const newTarball = path.resolve(tempFolder, `${uuid()}.tgz`)
+        const srcStream = fs.createReadStream(tarballPath)
+        const dstStream = fs.createWriteStream(newTarball)
+        const gunzipStream = gunzip()
+        const gzipStream = zlib.createGzip();
+
         // Check whether the property is defined in the tarball
         const done = async error => {
             if (error) {
                 console.error('Error in stream:', error)
                 reject(error)
             } else {
-                pack.finalize()
+                pack.finalize();
                 await fs.remove(tarballPath); // remove untransformed tarball
                 await fs.move(newTarball, tarballPath); // move transformed tarball to original location
-                console.info(`transformed to ${tarballPath}`)
+                console.info(`transformed ${tarballPath}`)
                 resolve(newTarball);
             }
         }
@@ -39,44 +39,59 @@ async function transformTarball(tempFolder, {tarballPath}) {
                 stream.on('end', () => pack.entry(header, callback).end())
                 stream.resume()
             } else if (header.name === 'package/package.json') {
-                const inBuffer = new WritableStreamBuffer()
-                const outBuffer = new ReadableStreamBuffer()
+                const inBuffer = new WritableStreamBuffer();
+                const outBuffer = new ReadableStreamBuffer();
 
                 stream
                     .pipe(inBuffer)
                     .once('error', error => reject(error))
                     .once('finish', () => {
                         const pkgString = inBuffer.getContentsAsString('utf8')
-                        const pkg = JSON.parse(pkgString)
-                        if ((pkg.publishConfig || {}).registry == null) {
-                            outBuffer.put(pkgString)
-                        } else {
-                            correctedPublishRegistry = true
-                            pkg.publishConfig.registry = NPME_URL;
-
-                            // tags are saved from ZNPM and will be assigned after publish
-                            if (pkg.publishConfig.tag) {
-                                delete pkg.publishConfig['tag'];
-                            }
-                            outBuffer.put(JSON.stringify(pkg, null, 2) + '\n', 'utf8')
-                        }
-                        outBuffer.stop()
-                        header.size = outBuffer.size()
-                        outBuffer.pipe(pack.entry(header, callback))
-                    })
+                        const pkg = JSON.parse(pkgString);
+                        const updatedPkg = {...pkg, publishConfig: { registry: NPME_URL }};
+                        const updatedHeader = { ...header };
+ 
+                        outBuffer.put(JSON.stringify(updatedPkg, null, 2) + '\n', 'utf8');
+                        outBuffer.stop();
+                        updatedHeader.size = outBuffer.size();
+                        outBuffer.pipe(pack.entry(updatedHeader, callback));
+                    });
             } else {
                 // Forward the entry into the new tarball unmodified.
                 stream.pipe(pack.entry(header, callback));
             }
         });
 
+        pack.on('error', (err) => {console.log('pack error'); console.log(err); reject(err);} )
+
         extract.once('finish', () => done())
+        extract.once('error', (err) => {
+            console.log('error extracting');
+            console.log(err);
+            reject(err);
+        });
 
-        const streams = [srcStream, dstStream, gunzipStream, gzipStream, extract]
-        streams.forEach(stream => stream.once('error', error => done(error)))
+        const streams = {
+            srcStream, 
+            dstStream, 
+            gunzipStream, 
+            gzipStream
+        };
+        
+        Object
+            .keys(streams)
+            .forEach(streamName => streams[streamName].once('error', error => {
+                console.log(streamName); 
+                done(error);
+            }))
 
-        srcStream.pipe(gunzipStream).pipe(extract)
-        pack.pipe(gzipStream).pipe(dstStream)
+        srcStream
+            .pipe(gunzipStream)
+            .pipe(extract)
+        
+        pack
+            .pipe(gzipStream)
+            .pipe(dstStream)
     });
 }
 

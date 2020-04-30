@@ -1,11 +1,9 @@
-const axios = require('axios');
 const Promise = require('bluebird');
 const path = require('path');
 const semver = require('semver');
+const pacote = require('pacote');
 
 const { NPME_URL, ZNPM_URL } = require('./constants');
-
-const isPreRelease = (version) => version.match(/(\d+\.\d+\.\d+-.*)/g) !== null;
 
 const getPackageVersionInfo = (packageName, { 'dist-tags': distTags, versions }) => {
     const [ packagesDir ] = process.argv.slice(2);
@@ -30,7 +28,7 @@ const getPackageVersionInfo = (packageName, { 'dist-tags': distTags, versions })
         })
 
         // dont publish pre releases without a dist tag
-        if (isPreRelease(version) && currentVersionInfo.distTags.length === 0) {
+        if (semver.prerelease(version) !== null && currentVersionInfo.distTags.length === 0) {
             return acc;
         }
 
@@ -43,14 +41,12 @@ const getPackageVersionInfo = (packageName, { 'dist-tags': distTags, versions })
 }
 
 async function fetchZnpmPackageInfo(packageName) {
-    const packageUrl = `${ZNPM_URL}/@zillow%2f${packageName}`;
-
     try {
-        const { data } = await axios.get(packageUrl);
-        return getPackageVersionInfo(packageName, data);
+        const packageInfo = await pacote.packument(`@zillow/${packageName}`, { registry: ZNPM_URL })
+        return getPackageVersionInfo(packageName, packageInfo);
     } catch (e) {
-        if (e.response.status === 404) {
-            console.log(`package ${packageName} doesnt exist in ZNPM. Skipping it.`);
+        if (e.message.includes('404')) {
+            console.log(`@zillow/${packageName} not found in ZNPM.`);
         }
     }
 
@@ -58,33 +54,23 @@ async function fetchZnpmPackageInfo(packageName) {
 }
 
 async function fetchNpmePublishedVersions(packageName) {
-    const packageUrl = `${NPME_URL}/@zillow%2f${packageName}`;
-
     try {
-        const { data } = await axios.get(packageUrl, {
-            headers: {
-                Authorization: `Bearer ${process.env.NPME_TOKEN}`
-            }
-        });
-        return Object.keys(data.versions);
+        const packageInfo = await pacote.packument(`@zillow/${packageName}`, { registry: NPME_URL, token: process.env.NPME_TOKEN });
+        return Object.keys(packageInfo.versions);
     } catch (e) {
-        if (e.response.status === 404) {
-            console.log(`package ${packageName} doesnt exist in npme yet`);
+        if (e.message.includes('404')) {
+            console.log(`@zillow/${packageName} not found in NPME.`);
         }
-        return [];
     }
+
+    return [];
 }
 
-async function fetchUnpublishedVersions(packages) {
-    return Promise.reduce(packages, async (acc, packageName) => {
+async function fetchUnpublishedVersions(packageName) {
         const znpmPackageInfo = await fetchZnpmPackageInfo(packageName);
         const npmePublishedVersions = await fetchNpmePublishedVersions(packageName);
 
-        return [
-            ...acc,
-            ...znpmPackageInfo.filter(({version}) => !npmePublishedVersions.includes(version))
-        ];
-    }, []);
+        return znpmPackageInfo.filter(({version}) => !npmePublishedVersions.includes(version))
 }
 
 module.exports = fetchUnpublishedVersions;
