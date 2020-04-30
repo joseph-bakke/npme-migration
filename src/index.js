@@ -43,7 +43,7 @@ async function ensureTarballOnDisk({tarballPath, tarballUrl}) {
 
 async function assignDistTags({ name, version, distTags }) {
     await Promise.each(distTags, (distTag) => {
-        console.log(`Adding dist tag ${distTag} to @zillow/${name}@${version}`);
+        console.log(`Adding dist tag ${distTag} to ${name}@${version}`);
         // npmDistTag.add(`@zillow/${packageName}@${version}`, distTag, {})
     });
 }
