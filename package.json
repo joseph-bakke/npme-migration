@@ -24,7 +24,7 @@
     "script"
   ],
   "publishConfig": {
-    "registry": "https://registry.zillow.npme.io/"
+    "registry": "http://znpm.in.zillow.net:31050/"
   },
   "author": "Joe Bakke <joeba@zillowgroup.com>",
   "license": "MIT",
