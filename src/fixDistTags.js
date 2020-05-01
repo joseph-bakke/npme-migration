@@ -63,8 +63,9 @@ async function applyDistTags({name, znpmDistTags}) {
 }
 
 // in case dist tags getted messed up during migration this fixes them
-async function fixDistTags() {
-    const [ name ] = process.argv.slice(2);
+async function fixDistTags(packageName) {
+    const [ nameArg ] = process.argv.slice(2);
+    const name = packageName || nameArg;
 
     if (!name) {
         console.log('no package name provided');

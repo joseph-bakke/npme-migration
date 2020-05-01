@@ -66,6 +66,7 @@ function transformTarball(tempFolder, manifest) {
             const validateRead = fs.createReadStream(newTarball);
             const validateExtract = tar.extract();
             const validateGunzip = gunzip();
+            let valid = true;
 
             validateExtract.on('entry', (header, stream, done) => {
                 if (header.name === 'package/package.json') {
@@ -80,6 +81,7 @@ function transformTarball(tempFolder, manifest) {
                                 JSON.parse(stringified);
                             } catch (e) {
                                 console.log(`Package.json was corrupted during trasnforming.`);
+                                valid = false;
                                 reject(e);
                             }
                             console.log(`${manifest.name}@${manifest.version} package.json is valid`);
@@ -94,7 +96,10 @@ function transformTarball(tempFolder, manifest) {
 
             validateExtract.once('finish', async () => {
                 console.log('done validating');
-                await fs.move(newTarball, tarballPath, { overwrite: true });
+
+                if (valid) {
+                    await fs.move(newTarball, tarballPath, { overwrite: true });
+                }
                 resolve();
             });
 
