@@ -53,8 +53,12 @@ async function fetchZnpmDistTags(name) {
 async function applyDistTags({name, znpmDistTags}) {
     await Promise.each(Object.keys(znpmDistTags), async (distTag, index, length) => {
         const version = znpmDistTags[distTag];
-        console.log(`adding dist tag ${distTag} to ${version}: ${index + 1} / ${length} `);
-        await npmDistTag.add(`@zillow/${name}@${version}`, distTag, { registry: NPME_URL, token: process.env.NPME_TOKEN });
+        try {
+            console.log(`adding dist tag ${distTag} to ${version}: ${index + 1} / ${length} `);
+            await npmDistTag.add(`@zillow/${name}@${version}`, distTag, { registry: NPME_URL, token: process.env.NPME_TOKEN });
+        } catch (e) {
+            console.log(e);
+        }
     });
 }
 

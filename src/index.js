@@ -32,19 +32,27 @@ async function ensureTarballOnDisk({tarballPath, dist: { tarball }}) {
 
     console.log(`Cannot find ${tarballPath} on disk. Downloading ${tarball}`);
     const writeStream = fs.createWriteStream(tarballPath);
-    const { data } = await axios.get(tarball, { responseType: 'stream' });
 
-    data.pipe(writeStream);
-
-    return new Promise(resolve => {
-        writeStream.on('close', resolve);
-    });
+    try {
+        const { data } = await axios.get(tarball, { responseType: 'stream' });
+        data.pipe(writeStream);
+    
+        return new Promise(resolve => {
+            data.on('end', resolve);
+        });
+    } catch (e) {
+        console.log(e);
+    }
 }
 
 async function assignDistTags({ name, version, distTags }) {
     await Promise.each(distTags, async (distTag) => {
-        console.log(`Adding dist tag ${distTag} to ${name}@${version}`);
-        await npmDistTag.add(`${name}@${version}`, distTag, { registry: NPME_URL, token: process.env.NPME_TOKEN })
+        try {
+            console.log(`Adding dist tag ${distTag} to ${name}@${version}`);
+            await npmDistTag.add(`${name}@${version}`, distTag, { registry: NPME_URL, token: process.env.NPME_TOKEN })
+        } catch (e) {
+            console.log(e);
+        }
     });
 }
 
@@ -65,18 +73,6 @@ async function migratePackages() {
     const failedToPublish = [];
     let publishedVersions = 0;
     
-    process.on('beforeExit', async () => {
-        const { doc_count: finalNpmeDocCount } = await getRegistryMetaInfo(NPME_URL);
-    
-        console.log(`Finished in ${Date.now() - start}ms`);
-        console.log(`published versions: ${publishedVersions}`);
-        console.log(`npme doc count diff: ${finalNpmeDocCount - initialNpmeDocCount}`);
-
-        console.log(`Failed to publish: ${failedToPublish.map((manifest) => `${manifest.name}@${manifest.version}`).join('\n')}`);
-        await fs.writeFile(FAILED_PUBLISH_OUT, JSON.stringify(failedToPublish));
-        process.exit(0);
-    });
-
     await Promise.each(packagesToFetch, async (packageName, index, length) => {
         console.log(`Processing package ${index + 1} / ${length}: ${packageName}`);
         const unpublishedVersions = await fetchUnpublishedVersions(packageName);
@@ -100,10 +96,17 @@ async function migratePackages() {
         });
 
         await Promise.map(unpublishedVersions, assignDistTags);
-
         publishedVersions += unpublishedVersions.length;
     });
 
+    const { doc_count: finalNpmeDocCount } = await getRegistryMetaInfo(NPME_URL);
+    console.log(`Finished in ${Date.now() - start}ms`);
+    console.log(`published versions: ${publishedVersions}`);
+    console.log(`npme doc count diff: ${finalNpmeDocCount - initialNpmeDocCount}`);
+
+    console.log(`Failed to publish: ${failedToPublish.map((manifest) => `${manifest.name}@${manifest.version}`).join('\n')}`);
+    await fs.writeFile(FAILED_PUBLISH_OUT, JSON.stringify(failedToPublish));
+    process.exit(0);
 
 }
 
