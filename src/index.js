@@ -85,7 +85,7 @@ async function migratePackages() {
     
     await Promise.each(packagesToFetch, async (packageName, index, length) => {
         console.log(`Processing package ${index + 1} / ${length}: ${packageName}`);
-        const unpublishedVersions = (await fetchUnpublishedVersions(packageName)).slice(0, 5);
+        const unpublishedVersions = (await fetchUnpublishedVersions(packageName));
         console.log(`Got ${unpublishedVersions.length} unpublished versions to migrate`);
 
         await Promise.each(unpublishedVersions, async (manifest, index, length) => {
@@ -114,19 +114,22 @@ async function migratePackages() {
         publishedVersions += unpublishedVersions.length;
     });
 
-    const { doc_count: finalNpmeDocCount } = await getRegistryMetaInfo(NPME_URL);
-    const took = Date.now() - start;
-    const avg = Math.floor(took / publishedVersions);
-    console.log(`Finished in ${took}ms`);
-    console.log(`published versions: ${publishedVersions}`);
-    console.log(`npme doc count diff: ${finalNpmeDocCount - initialNpmeDocCount}`);
-    console.log(`avg time per package: ${prettyMs(avg)}`);
-    console.log(`expected total time: ${prettyMs(avg * 500 * 976)}`);
+    const onExit = async () => {
+        const { doc_count: finalNpmeDocCount } = await getRegistryMetaInfo(NPME_URL);
+        const took = Date.now() - start;
+        const avg = Math.floor(took / publishedVersions);
+        console.log(`Finished in ${took}ms`);
+        console.log(`published versions: ${publishedVersions}`);
+        console.log(`npme doc count diff: ${finalNpmeDocCount - initialNpmeDocCount}`);
+        console.log(`avg time per package: ${prettyMs(avg)}`);
+        console.log(`expected total time: ${prettyMs(avg * 500 * 976)}`);
+    
+        console.log(`Failed to publish: ${failedToPublish.map((manifest) => `${manifest.name}@${manifest.version}`).join('\n')}`);
+        await fs.writeFile(FAILED_PUBLISH_OUT, JSON.stringify(failedToPublish));
+    }
 
-    console.log(`Failed to publish: ${failedToPublish.map((manifest) => `${manifest.name}@${manifest.version}`).join('\n')}`);
-    await fs.writeFile(FAILED_PUBLISH_OUT, JSON.stringify(failedToPublish));
-    process.exit(0);
-
+    process.on('exit', onExit);
+    process.on('SIGINT', onExit);
 }
 
 migratePackages();
