@@ -81,8 +81,9 @@ function transformTarball(tempFolder, manifest) {
                                 JSON.parse(stringified);
                             } catch (e) {
                                 console.log(`Package.json was corrupted during trasnforming.`);
+                                console.log(stringified);
                                 valid = false;
-                                reject(e);
+                                return reject();
                             }
                             console.log(`${manifest.name}@${manifest.version} package.json is valid`);
                             done();
@@ -101,6 +102,12 @@ function transformTarball(tempFolder, manifest) {
                     await fs.move(newTarball, tarballPath, { overwrite: true });
                 }
                 resolve();
+            });
+
+            validateExtract.on('error', (err) => {
+                console.log('Error when validating package.json');
+                console.log(err);
+                reject(err);
             });
 
             validateRead

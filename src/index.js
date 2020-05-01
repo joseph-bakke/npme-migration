@@ -82,8 +82,6 @@ async function migratePackages() {
     startIndex = parseInt(startIndex) || 0;
     sliceLength = parseInt(sliceLength) || packages.length;
 
-    console.log(startIndex, sliceLength);
-
     const packagesToFetch = packages.slice(startIndex, sliceLength);
 
     const failedToPublish = [];
