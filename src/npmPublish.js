@@ -3,6 +3,7 @@ const npa = require('npm-package-arg')
 const semver = require('semver');
 const fs = require('fs-extra');
 const ssri = require('ssri');
+const prettyMs = require('pretty-ms');
 
 const { NPME_URL, ZNPM_URL } = require('./constants');
 
@@ -25,17 +26,21 @@ async function npmPublish(manifest) {
     const cleanedVersion = semver.clean(manifest.version);
     manifest.version = cleanedVersion;
     
+    const dataStart = Date.now();
     const tarballData = await getTarballData({tarballPath, spec, manifest});
     const metadata = buildMetadata(registry, manifest, tarballData, opts);
+    console.log(`Took ${prettyMs(Date.now() - dataStart)} to build publish manifest`);
 
     // return;
     try {
+      const fetchStart = Date.now();
       await npmFetch(spec.escapedName, {
         ...opts,
         method: 'PUT',
         body: metadata,
         ignoreBody: true
       });
+      console.log(`Took ${prettyMs(Date.now() - fetchStart)} to publish`)
     } catch (e) {
       // retry because sometimes publishing two at a time fails
       await npmFetch(spec.escapedName, {

@@ -69,7 +69,7 @@ async function assignDistTags({ name, version, distTags }) {
 async function migratePackages() {
     const start = Date.now();
     await fs.ensureDir(TEMP_FOLDER);
-    const [ packagesDir, specificPackage ] = process.argv.slice(2);
+    let [ packagesDir, startIndex, sliceLength ] = process.argv.slice(2);
 
     if (!packagesDir) {
         console.log('Cannot migrate without packages dir');
@@ -78,13 +78,20 @@ async function migratePackages() {
     
     const packages = await fs.readdir(path.resolve(packagesDir));
     const { doc_count: initialNpmeDocCount } = await getRegistryMetaInfo(NPME_URL);
-    const packagesToFetch = specificPackage ? [specificPackage] : packages;
+
+    startIndex = parseInt(startIndex) || 0;
+    sliceLength = parseInt(sliceLength) || packages.length;
+
+    console.log(startIndex, sliceLength);
+
+    const packagesToFetch = packages.slice(startIndex, sliceLength);
 
     const failedToPublish = [];
     let publishedVersions = 0;
     let avgPublishTime = 0;
     let avgPackages = 0;
     let nonZeroPackageCount = 0;
+    let totalTime = 0;
     
     await Promise.each(packagesToFetch, async (packageName, packagesIndex, packagesLength) => {
         console.log(`Processing package ${packagesIndex + 1} / ${packagesLength}: ${packageName}`);
@@ -114,6 +121,7 @@ async function migratePackages() {
                 const publishStart = Date.now();
                 await npmPublish(manifest);
                 const publishTime = Date.now() - publishStart;
+                totalTime += totalTime;
                 avgPublishTime = ((avgPublishTime * index) + publishTime) / (index + 1);
 
                 console.log('---------------------------------------');
