@@ -88,6 +88,8 @@ async function migratePackages() {
     let publishedVersions = 0;
     let avgPublishTime = 0;
     let avgPackages = 0;
+    let avgBytesPerVersion = 0;
+    let totalVersionCount = 0;
     let nonZeroPackageCount = 0;
     let totalTime = 0;
     
@@ -103,6 +105,7 @@ async function migratePackages() {
         avgPackages = ((avgPackages * nonZeroPackageCount) + unpublishedVersions.length) / (nonZeroPackageCount + 1);
 
         await Promise.each(unpublishedVersions, async (manifest, index, length) => {
+
             console.log(`Migrating ${manifest.name}@${manifest.version}: ${index + 1} / ${length}`);
 
             try {                
@@ -119,17 +122,25 @@ async function migratePackages() {
                 const publishStart = Date.now();
                 await npmPublish(manifest);
                 const publishTime = Date.now() - publishStart;
+
+                totalVersionCount++;
                 totalTime += totalTime;
+                avgBytesPerVersion = ((avgBytesPerVersion * (totalVersionCount - 1)) + transformedSize) / (totalVersionCount);
                 avgPublishTime = ((avgPublishTime * index) + publishTime) / (index + 1);
+
+                const pkgRemaining = packagesLength - packagesIndex + 1;
+                const avgBytesPerMs = avgBytesPerVersion / avgPublishTime;
 
                 console.log('---------------------------------------');
                 console.log(`Took ${prettyMs(publishTime)} to publish`);
                 console.log(`Averaging ${prettyMs(avgPublishTime)} per publish`);
                 console.log(`Averaging ${avgPackages} versions per package`);
-                console.log(`${packagesLength - packagesIndex + 1} packages remaining`);
-                console.log(`${(packagesLength - packagesIndex + 1) * avgPackages} versions remaining`);
+                console.log(`Averaging ${avgBytesPerVersion} bytes per version`);
+                console.log(`Averaging ${avgBytesPerMs * 1000} bytes per sec upload`);
+                console.log(`${pkgRemaining} packages remaining`);
+                console.log(`Estimated ${(packagesLength - packagesIndex + 1) * avgPackages} versions remaining`);
                 console.log(`Estimated ${prettyMs(avgPublishTime * (length - index + 1))} remaining for package`);
-                console.log(`Estimated ${prettyMs(avgPublishTime * ((avgPackages * (packagesLength - packagesIndex + 1) + (length - index + 1))))} remaining for all packages`)
+                console.log(`Estimated ${prettyMs((avgPackages * pkgRemaining * avgBytesPerVersion) / avgBytesPerMs)} remaining for all packages`)
                 console.log('---------------------------------------');
                 await assignDistTags(manifest);
             } catch (e) {
