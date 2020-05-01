@@ -79,9 +79,14 @@ async function migratePackages() {
         console.log(`Got ${unpublishedVersions.length} unpublished versions to migrate`);
         
         await Promise.map(unpublishedVersions, ensureTarballOnDisk);
-        await Promise.map(unpublishedVersions, async (unpublishedVersion, index, length) => {
-            console.log(`Transforming tarball: ${index + 1} / ${length}`);
-            await transformTarball(TEMP_FOLDER, unpublishedVersion);
+        await Promise.map(unpublishedVersions, async (manifest, index, length) => {
+            console.log(`Transforming tarball: ${index + 1} / ${length}: ${manifest.tarballPath}`);
+            try {
+                await transformTarball(TEMP_FOLDER, manifest);
+            } catch (e) {
+                console.log(e);
+                failedToPublish.push(manifest);
+            }
         });
     
         await Promise.each(unpublishedVersions, async (manifest, index, length) => {
