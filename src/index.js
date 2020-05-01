@@ -82,11 +82,15 @@ async function migratePackages() {
 
     const failedToPublish = [];
     let publishedVersions = 0;
+    let avgPublishTime = 0;
+    let avgPackages = 0;
     
-    await Promise.each(packagesToFetch, async (packageName, index, length) => {
-        console.log(`Processing package ${index + 1} / ${length}: ${packageName}`);
+    await Promise.each(packagesToFetch, async (packageName, packagesIndex, packagesLength) => {
+        console.log(`Processing package ${packagesIndex + 1} / ${packagesLength}: ${packageName}`);
         const unpublishedVersions = (await fetchUnpublishedVersions(packageName));
         console.log(`Got ${unpublishedVersions.length} unpublished versions to migrate`);
+
+        avgPackages = ((avgPackages * packagesIndex) + unpublishedVersions.length) / (packagesIndex + 1);
 
         await Promise.each(unpublishedVersions, async (manifest, index, length) => {
             console.log(`Migrating ${manifest.name}@${manifest.version}: ${index + 1} / ${length}`);
@@ -102,7 +106,14 @@ async function migratePackages() {
                 console.log(`Original size: ${originalSize}. Transformed size: ${transformedSize}`);
                 console.log(`Size diff: ${originalSize - transformedSize}`);
 
+                const publishStart = Date.now();
                 await npmPublish(manifest);
+                const publishTime = Date.now() - publishStart;
+                avgPublishTime = ((avgPublishTime * index) + publishTime) / (index + 1);
+                console.log(`Took ${prettyMs(publishTime)} to publish`);
+                console.log(`Averaging ${prettyMs(avgPublishTime)} per publish`);
+                console.log(`Estimated ${prettyMs(avgPublishTime * (length - index + 1))} remaining for package`);
+                console.log(`Estimated ${prettyMs(avgPublishTime * avgPackages * (packagesLength - packagesIndex + 1))} remaining for all packages`)
                 await assignDistTags(manifest);
             } catch (e) {
                 console.log(`Failed to migrate ${manifest.name}@${manifest.version}`);
@@ -110,6 +121,7 @@ async function migratePackages() {
                 failedToPublish.push(manifest);
             }
         });
+
 
         publishedVersions += unpublishedVersions.length;
     });
@@ -126,6 +138,7 @@ async function migratePackages() {
     
         console.log(`Failed to publish: ${failedToPublish.map((manifest) => `${manifest.name}@${manifest.version}`).join('\n')}`);
         await fs.writeFile(FAILED_PUBLISH_OUT, JSON.stringify(failedToPublish));
+        process.exit(0);
     }
 
     process.on('exit', onExit);

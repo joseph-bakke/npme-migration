@@ -29,12 +29,22 @@ async function npmPublish(manifest) {
     const metadata = buildMetadata(registry, manifest, tarballData, opts);
 
     // return;
-    await npmFetch(spec.escapedName, {
-      ...opts,
-      method: 'PUT',
-      body: metadata,
-      ignoreBody: true
-    });
+    try {
+      await npmFetch(spec.escapedName, {
+        ...opts,
+        method: 'PUT',
+        body: metadata,
+        ignoreBody: true
+      });
+    } catch (e) {
+      // retry because sometimes publishing two at a time fails
+      await npmFetch(spec.escapedName, {
+        ...opts,
+        method: 'PUT',
+        body: metadata,
+        ignoreBody: true
+      });
+    }
 }
 
 async function getTarballData({tarballPath, spec, manifest}) {
