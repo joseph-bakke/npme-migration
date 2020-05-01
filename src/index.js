@@ -84,6 +84,7 @@ async function migratePackages() {
             try {
                 await transformTarball(TEMP_FOLDER, manifest);
             } catch (e) {
+                console.log(`failed to transform tarball ${manifest.tarballPath}`);
                 console.log(e);
                 failedToPublish.push(manifest);
             }
