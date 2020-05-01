@@ -3,12 +3,13 @@ const npa = require('npm-package-arg')
 const semver = require('semver');
 const fs = require('fs-extra');
 const ssri = require('ssri');
-const pacote = require('pacote');
 
 const { NPME_URL, ZNPM_URL } = require('./constants');
 
 module.exports = npmPublish;
-async function npmPublish(manifest, index, length) {
+async function npmPublish(manifest) {
+    console.log(`Publishing ${manifest.name}@${manifest.version}`);
+
     const { tarballPath } = manifest;
     const registry = NPME_URL;
     const spec = npa.resolve(`${manifest.name}`, manifest.version);
@@ -27,6 +28,7 @@ async function npmPublish(manifest, index, length) {
     const tarballData = await getTarballData({tarballPath, spec, manifest});
     const metadata = buildMetadata(registry, manifest, tarballData, opts);
 
+    // return;
     await npmFetch(spec.escapedName, {
       ...opts,
       method: 'PUT',
@@ -39,13 +41,9 @@ async function getTarballData({tarballPath, spec, manifest}) {
   const { dist: { integrity } } = manifest;
   const resolved = null;
   const from = `${spec.name}@${spec.rawSpec}`;
-  const { size } = await fs.stat(tarballPath);
   let tarballData = await fs.readFile(tarballPath);
 
-  if (size !== tarballData.length) {
-    console.log(`size ${size} does not match length ${tarballData.length} retrying read`);
-    tarballData = await fs.readFile(tarballPath);
-  }
+  console.log(`Uploading ${tarballData.length} bytes for package ${tarballPath}`);
 
   tarballData.integrity = integrity;
   tarballData.resolved = resolved;
@@ -95,7 +93,7 @@ function buildMetadata(registry, _manifest, tarballData, opts) {
   
     root._attachments = {}
     root._attachments[tarballName] = {
-      content_type: 'application/octet-stream',
+      'content-type': 'application/octet-stream',
       data: tarballData.toString('base64'),
       length: tarballData.length
     }
