@@ -14,7 +14,6 @@ const npmPublish = require('./npmPublish');
 const { NPME_URL } = require('./constants');
 
 const TEMP_FOLDER = tempy.directory();
-const FAILED_PUBLISH_OUT = path.resolve('./', 'failed_publish.txt');
 
 async function getRegistryMetaInfo(registryUrl) {
     try {
@@ -82,9 +81,9 @@ async function migratePackages() {
     startIndex = parseInt(startIndex) || 0;
     sliceLength = parseInt(sliceLength) || packages.length;
 
+    // read list of packages to publish from disk
     const packagesToFetch = packages.slice(startIndex, sliceLength);
 
-    const failedToPublish = [];
     let publishedVersions = 0;
     let avgPublishTime = 0;
     let avgPackages = 0;
@@ -92,9 +91,11 @@ async function migratePackages() {
     let totalVersionCount = 0;
     let nonZeroPackageCount = 0;
     let totalTime = 0;
-    
+
     await Promise.each(packagesToFetch, async (packageName, packagesIndex, packagesLength) => {
         console.log(`Processing package ${packagesIndex + 1} / ${packagesLength}: ${packageName}`);
+
+        // gets all versions that are in ZNPM
         const unpublishedVersions = (await fetchUnpublishedVersions(packageName));
         console.log(`Got ${unpublishedVersions.length} unpublished versions to migrate`);
 
@@ -104,15 +105,19 @@ async function migratePackages() {
         nonZeroPackageCount += 1;
         avgPackages = ((avgPackages * nonZeroPackageCount) + unpublishedVersions.length) / (nonZeroPackageCount + 1);
 
+
+        // handle each version synchronously
         await Promise.each(unpublishedVersions, async (manifest, index, length) => {
 
             console.log(`Migrating ${manifest.name}@${manifest.version}: ${index + 1} / ${length}`);
 
-            try {                
+            try {        
+                // download tarball if there is a version published that isn't on disk        
                 await ensureTarballOnDisk(manifest);
                 
                 const { size: originalSize } = await fs.stat(manifest.tarballPath);
                 
+                // change publishConfig.registry to NPME_URL
                 await transformTarball(TEMP_FOLDER, manifest);
 
                 const { size: transformedSize } = await fs.stat(manifest.tarballPath);
@@ -120,8 +125,13 @@ async function migratePackages() {
                 console.log(`Size diff: ${originalSize - transformedSize}`);
 
                 const publishStart = Date.now();
+
+                // actually publish
                 await npmPublish(manifest);
                 const publishTime = Date.now() - publishStart;
+
+                // assign any dist tags if the version has them
+                await assignDistTags(manifest);
 
                 totalVersionCount++;
                 totalTime += totalTime;
@@ -131,6 +141,7 @@ async function migratePackages() {
                 const pkgRemaining = packagesLength - packagesIndex + 1;
                 const avgBytesPerMs = avgBytesPerVersion / avgPublishTime;
 
+                // stat stuff for my sanity
                 console.log('---------------------------------------');
                 console.log(`Took ${prettyMs(publishTime)} to publish`);
                 console.log(`Averaging ${prettyMs(avgPublishTime)} per publish`);
@@ -142,35 +153,15 @@ async function migratePackages() {
                 console.log(`Estimated ${prettyMs(avgPublishTime * (length - index + 1))} remaining for package`);
                 console.log(`Estimated ${prettyMs((avgPackages * pkgRemaining * avgBytesPerVersion) / avgBytesPerMs)} remaining for all packages`)
                 console.log('---------------------------------------');
-                await assignDistTags(manifest);
             } catch (e) {
                 console.log(`Failed to migrate ${manifest.name}@${manifest.version}`);
                 console.log(e);
-                failedToPublish.push(manifest);
             }
         });
 
 
         publishedVersions += unpublishedVersions.length;
     });
-
-    const onExit = async () => {
-        const { doc_count: finalNpmeDocCount } = await getRegistryMetaInfo(NPME_URL);
-        const took = Date.now() - start;
-        const avg = Math.floor(took / publishedVersions);
-        console.log(`Finished in ${took}ms`);
-        console.log(`published versions: ${publishedVersions}`);
-        console.log(`npme doc count diff: ${finalNpmeDocCount - initialNpmeDocCount}`);
-        console.log(`avg time per package: ${prettyMs(avg)}`);
-        console.log(`expected total time: ${prettyMs(avg * 500 * 976)}`);
-    
-        console.log(`Failed to publish: ${failedToPublish.map((manifest) => `${manifest.name}@${manifest.version}`).join('\n')}`);
-        await fs.writeFile(FAILED_PUBLISH_OUT, JSON.stringify(failedToPublish));
-        process.exit(0);
-    }
-
-    process.on('exit', onExit);
-    process.on('SIGINT', onExit);
 }
 
 migratePackages();
